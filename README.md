@@ -1,5 +1,6 @@
 # Implementation of Deep Hybrid Models for Out-of-Distribution (OOD) detection
 
+Implementation of the Deep Hybrid Models (DHMs) described by Cao and Zhang (2022).
 
 ## Replicating CIFAR-10 Results
 
