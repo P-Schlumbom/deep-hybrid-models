@@ -35,7 +35,7 @@ We report the following results compared to the original DHM:
 | SNGP<sup>*</sup> | 0.902 +/- 0.01 | **0.990 +/- 0.01**  | -             |
 | Softmax Baseline | **0.95 +/- 0.01**  | 0.93 +/- 0.02   | 0.36 +/- 0.02 |
 
-* Note we compare with SNGP [^4] using a WRN-28-10 feature encoder for direct comparison to both DHM implementations.
+<sup>*</sup> Note we compare with SNGP [^4] using a WRN-28-10 feature encoder for direct comparison to both DHM implementations.
 
 The results we report for the DHM trained on CIFAR-10 data can be replicated here:
 
@@ -46,11 +46,20 @@ python train_dhm_iresflow.py --epochs 200 --batch 256 --N 4 --k 10 --n_blocks 10
 
 ## References
 
-[^1] Senqi Cao and Zhongfei Zhang. Deep hybrid models for out-of-distribution detection. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 4733–4743, 2022.
+[^1]: Senqi Cao and Zhongfei Zhang. Deep hybrid models for out-of-distribution detection. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 4733–4743, 2022.
 
-[^2] Antonio Torralba, Rob Fergus, and William T Freeman. 80 million tiny images: A large data set for non-parametric object and scene recognition. IEEE transactions on pattern analysis and machine intelligence, 30(11):1958–1970, 2008.
+[^2]: Antonio Torralba, Rob Fergus, and William T Freeman. 80 million tiny images: A large data set for non-parametric object and scene recognition. IEEE transactions on pattern analysis and machine intelligence, 30(11):1958–1970, 2008.
 
-[^3] Eric Nalisnick, Akihiro Matsukawa, Yee Whye Teh, Dilan Gorur, and Balaji Lakshminarayanan. Do deep generative models know what they don’t know? arXiv preprint arXiv:1810.09136, 2018.
+[^3]: Eric Nalisnick, Akihiro Matsukawa, Yee Whye Teh, Dilan Gorur, and Balaji Lakshminarayanan. Do deep generative models know what they don’t know? arXiv preprint arXiv:1810.09136, 2018.
 
-[^4] Jeremiah Liu, Zi Lin, Shreyas Padhy, Dustin Tran, Tania Bedrax Weiss, and Balaji Lakshminarayanan. Simple and principled uncertainty estimation with deterministic deep learning via distance awareness. Advances in neural information processing systems, 33:7498–7512, 2020.
+[^4]: Jeremiah Liu, Zi Lin, Shreyas Padhy, Dustin Tran, Tania Bedrax Weiss, and Balaji Lakshminarayanan. Simple and principled uncertainty estimation with deterministic deep learning via distance awareness. Advances in neural information processing systems, 33:7498–7512, 2020.
 
+```bibtex
+@inproceedings{Cao2022-cc,
+  title={Deep hybrid models for out-of-distribution detection},
+  author={Cao, Senqi and Zhang, Zhongfei},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={4733--4743},
+  year={2022}
+}
+```
