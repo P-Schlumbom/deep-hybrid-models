@@ -1,40 +1,23 @@
 import os.path
-import random
-import sys
 
 import numpy as np
 import scipy.stats as stats
-# from scipy.stats import skew
 
 import wandb
 from tqdm import tqdm
-from math import log
-from os import makedirs
 from os.path import join, exists
-import plotly.express as px
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.utils as utils
-from torch.distributions import constraints
 from torch.utils.data import Dataset, DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
 import torchvision
 import torchvision.transforms as transforms
 
-import normflows as nfl
-
 import argparse
 
-from architectures.resnets.blocks import ModernBasicBlock
-from architectures.resnets.wide_resnet import WideResNet
-from architectures.normalising_flows.glow import Glow
-from architectures.normalising_flows.residual_flows.residual_flow import ResidualFlow, ACT_FNS, create_resflow
-from architectures.normalising_flows.residual_flows.layers.elemwise import LogitTransform, Normalize, IdentityTransform
-from architectures.normalising_flows.residual_flows.layers.squeeze import SqueezeLayer
 from architectures.normalising_flows.residual_flows.layers import base as base_layers
-from architectures.normalising_flows.residual_flows import layers as layers
 from architectures.deep_hybrid_models.dhm import DHM, define_flow_model, DHM_normflows, BottleneckDHM, create_dhm, \
     normflows_logpx_loop, create_ires_dhm, create_mvn_dhm
 from test_OOD import generate_histograms, generate_tsne_plots, generate_multidata_tsne_plots, test_embedding_methods, \
@@ -47,8 +30,6 @@ from datasets.data_classes import StripedImages, StripedOODImages
 # in case CIFAR10 fails to download
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
-
-# from testing.live_dash_plots import generate_tsne_with_images
 
 ACTIVATION_FNS = {
     'relu': torch.nn.ReLU,
@@ -251,13 +232,7 @@ def create_custom_dataloaders(datamodel, batch=32, num_samples=1000, num_test_sa
 
 
 def compute_nf_loss(logpz, logdet):
-    # log probability is
-    #   logpz - logdet,
-    # so mean loss is
-    #   mean(-(logpz - logdet))
-    #   = mean(logdet - logpz)
     return (logdet - logpz).mean()
-    #return -(logpz + logdet).mean()
 
 
 def experimental_nf_loss(logpz, logdet, labels):
@@ -478,9 +453,7 @@ def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader
             dnn_optimizer.zero_grad()
 
             # forward + backward + optimize
-            # y, loss_flow, features = model(inputs, return_features=True)  # y, logpz, logdet, z
             y, logpz, logdet, z, features = model(inputs, return_features=True)
-            # print("train function: ", features.min(), features.mean(), features.max())
 
             loss_classifier = criterion(y, labels)
             if args.additional_loss == "class_adjust":
@@ -493,14 +466,9 @@ def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader
                 loss += feature_loss
             loss.backward()
 
-            # clip gradients...
-            # max_norm = 10.0
-            # utils.clip_grad_norm_(model.parameters(), max_norm)
-
             flow_optimizer.step()
             dnn_optimizer.step()
 
-            # nfl.utils.update_lipschitz(model, n_iterations=50)
             update_lipschitz(model, n_iterations=args.n_lipschitz_iters)
 
             # calculate statistics
@@ -552,18 +520,9 @@ def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader
                 val_latent_stats = update_latent_stats(val_latent_stats, z.detach().cpu().numpy(), j)
             if args.test_every_epoch:
                 test_results = generate_histograms(model, batch_size=args.batch, tgt_name=f"test", test_unimodal=True)
-                #test_results = compute_auroc_scores(model, testloader, [OODloader])
 
         # update final loss estimate
         mean_global_loss = running_average(mean_flow_loss, mean_global_loss, epoch)
-        if epoch == 0:
-            first_loss = mean_global_loss
-        elif epoch == 1:
-            diff = abs(first_loss - mean_global_loss)
-            est_final_loss = diff
-        else:
-            if mean_global_loss < (first_loss - est_final_loss):
-                est_final_loss *= 2
 
         if args.save_checkpoints and val_acc > best_val_acc:
             model_dict = {
@@ -584,7 +543,6 @@ def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader
 
         if scheduler:
             scheduler.step()
-            # flow_scheduler.step()
 
         tqdm.write(
             f"epoch {epoch}: train loss: {mean_loss:.5f}, classifier loss: {mean_classifier_loss:.5f}, "
@@ -874,88 +832,51 @@ if __name__ == "__main__":
 
     # --- DEFINE DHM --- #
 
-    # dhm = create_dhm(args.batch, input_size=datashape, n_classes=n_classes, N=args.N, k=args.k, n_flows=args.n_flows, idim=args.idim, flatten=args.flatten,
-    #                 init_layer=args.init_layer, normalise_features=args.normalise_features, common_features=args.common_features, **dhm_args)
-    if args.distribution_model == "normflow":
-        dhm = create_ires_dhm(
-            input_size=datashape,
-            n_classes=n_classes,
-            bottleneck=args.bottleneck,
-            N=args.N,
-            k=args.k,
-            common_features=args.common_features,
-            normalise_features=args.normalise_features,
-            flatten=args.flatten,
-            sn=args.sn,
-            n_power_iter=args.n_power_iter,
-            dnn_coeff=args.dnn_coeff,
-            n_blocks=args.n_blocks,
-            dims=args.dims,
-            actnorm=args.actnorm,
-            act=args.act,
-            n_dist=args.n_dist,
-            n_power_series=args.n_power_series,
-            exact_trace=args.exact_trace,
-            brute_force=args.brute_force,
-            n_samples=args.n_samples,
-            batchnorm=args.batchnorm,
-            vnorms=args.vnorms,
-            learn_p=args.learn_p,
-            mixed=args.mixed,
-            nf_coeff=args.nf_coeff,
-            n_lipschitz_iters=args.n_lipschitz_iters,
-            atol=args.atol,
-            rtol=args.atol,
-            init_layer=args.init_layer,
-            src_name=args.src_name,
-            norm_ord=args.norm_ord,
-        )
-    elif args.distribution_model in ["mvn", "gmm"]:
-        dhm = create_mvn_dhm(
-            input_size=datashape,
-            n_classes=n_classes,
-            dist_model=args.distribution_model,
-            bottleneck=args.bottleneck,
-            N=args.N,
-            k=args.k,
-            common_features=args.common_features,
-            normalise_features=args.normalise_features,
-            flatten=args.flatten,
-            sn=args.sn,
-            n_power_iter=args.n_power_iter,
-            dnn_coeff=args.dnn_coeff,
-            src_name=args.src_name,
-            norm_ord=args.norm_ord,
-        )
+
+    dhm = create_ires_dhm(
+        input_size=datashape,
+        n_classes=n_classes,
+        bottleneck=args.bottleneck,
+        N=args.N,
+        k=args.k,
+        common_features=args.common_features,
+        normalise_features=args.normalise_features,
+        flatten=args.flatten,
+        sn=args.sn,
+        n_power_iter=args.n_power_iter,
+        dnn_coeff=args.dnn_coeff,
+        n_blocks=args.n_blocks,
+        dims=args.dims,
+        actnorm=args.actnorm,
+        act=args.act,
+        n_dist=args.n_dist,
+        n_power_series=args.n_power_series,
+        exact_trace=args.exact_trace,
+        brute_force=args.brute_force,
+        n_samples=args.n_samples,
+        batchnorm=args.batchnorm,
+        vnorms=args.vnorms,
+        learn_p=args.learn_p,
+        mixed=args.mixed,
+        nf_coeff=args.nf_coeff,
+        n_lipschitz_iters=args.n_lipschitz_iters,
+        atol=args.atol,
+        rtol=args.atol,
+        init_layer=args.init_layer,
+        src_name=args.src_name,
+        norm_ord=args.norm_ord,
+    )
 
     dhm.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    if args.distribution_model == "normflow":
-        flow_optimizer = optim.Adam(
-            dhm.flow.parameters(),
-            lr=args.lr,  # 1e-4,
-            weight_decay=16e-4
-        )
-    elif args.distribution_model == "mvn":
-        flow_optimizer = optim.Adam(
-            # dhm.mvn.parameters(),
-            [
-                {'params': dhm.mvn.mean},
-                {'params': dhm.mvn.cov, 'constraints': constraints.positive}
-            ],
-            lr=args.lr,  # 1e-4,
-            weight_decay=16e-4
-        )
-    elif args.distribution_model == "gmm":
-        flow_optimizer = optim.Adam(
-            [
-                {'params': dhm.mvn.means},
-                {'params': dhm.mvn.covs, 'constraints': constraints.positive}
-            ],
-            lr=args.lr,  # 1e-4,
-            weight_decay=16e-4
-        )
+
+    flow_optimizer = optim.Adam(
+        dhm.flow.parameters(),
+        lr=args.lr,  # 1e-4,
+        weight_decay=16e-4
+    )
+
     dnn_optimizer = optim.SGD(
         # dhm.parameters(),  #
         [{'params': dhm.dnn.parameters()}, {'params': dhm.fc.parameters()}],
@@ -968,9 +889,7 @@ if __name__ == "__main__":
     print(f"Dropping learning rates at epoch milestones: {schedule}")
     scheduler = MultiStepLR(dnn_optimizer, milestones=schedule, gamma=0.2)
 
-    # final_results = {'val_acc': 0, 'val_loss': 0}
     final_results = train(args, dhm, flow_optimizer, dnn_optimizer, trainloader, testloader, scheduler)
-    # final_results = train_alternating(args, dhm, flow_optimizer, dnn_optimizer, trainloader, testloader, scheduler)
 
     model_dict = {
         'state_dict': dhm.state_dict(),
@@ -991,18 +910,13 @@ if __name__ == "__main__":
         dhm.eval()
         test_results = generate_histograms(dhm, batch_size=max(args.batch // 2, 1),
                                            tgt_name=f"{tgt_name}_e{args.epochs}", )
-        #test_results = compute_auroc_scores(dhm, testloader, [OODloader])
+
         wandb.log(test_results)
 
         fig, tsne_results, data_table, histogram = generate_multidata_tsne_plots(dhm, batch_size=max(args.batch // 2, 1),
                                                                       return_table=True, plot_classes=False,
                                                                       max_size=30, use_metropolis=False)
-        #fig, data_table = compute_embeddings(dhm, testloader, [OODloader], batch_size=args.batch, return_table=True,
-        #                                     max_size=30)
 
-        # fig, results, data_table = test_custom_datasets(dhm, [testloader, OODtrainloader],
-        #                                                dataset_names=['ID', 'OOD'], batch_size=max(args.batch//2, 1),
-        #                                                return_table=True, max_size=30, test_gmm=False)
         if args.mode == 'disabled':
             # fig.show()
             # histogram.show()
@@ -1014,8 +928,7 @@ if __name__ == "__main__":
                 'tsne_data': wandb.Table(dataframe=data_table),
                 'tsne_results': tsne_results
             })
-            # wandb.log({'tsne_data': wandb.Table(dataframe=data_table), 'test_results': results})
         output_string += f"{test_results['CIFAR100_AUROC']};{test_results['SVHN_AUROC']};"
-    # generate_tsne_plots(dhm)
+
     wandb.finish()
     print(output_string)

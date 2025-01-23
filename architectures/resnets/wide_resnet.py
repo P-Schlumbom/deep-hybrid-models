@@ -38,26 +38,15 @@ class WideResNet(nn.Module):
         coeff: float = 1.0,
     ) -> None:
         super().__init__()
-        #_log_api_usage_once(self)
-        """if norm_layer is None:
-            if spectral_normalization:
-                norm_layer = SpectralBatchNorm2d  # _SpectralBatchNorm # SpectralBatchNorm2d(num_features, coeff)
-            else:
-                norm_layer = nn.BatchNorm2d"""
 
         def wrapped_bn(num_features):
             if spectral_normalization:
                 bn = SpectralBatchNorm2d(num_features, coeff)
             else:
                 bn = nn.BatchNorm2d(num_features, eps=1e-5, momentum=0.01, affine=True)
-
-            # bn = nn.BatchNorm2d(num_features)
-
             return bn
 
         self.wrapped_bn = wrapped_bn
-
-        #self._norm_layer = norm_layer
 
         self.spectral_normalization = spectral_normalization
         self.n_power_iter = n_power_iter
@@ -82,35 +71,20 @@ class WideResNet(nn.Module):
         if spectral_normalization:
             self.conv1 = self._wrapper_spectral_norm(nn.Conv2d(self.in_depth, self.inplanes, kernel_size=3, stride=1, padding=1,
                                                                bias=False), (self.in_depth, self.in_width-O, self.in_height-O), 3)
-            #testweight = getattr(self.conv1, 'weight_orig')
-            #print(f"conv1 weight_orig shape: {testweight.shape}")
             self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=1)
-            #print(getattr(self.conv1, 'weight_u'))
-            #print(getattr(self.conv1, 'weight_u').shape)
         else:
             self.conv1 = nn.Conv2d(self.in_depth, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
             self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=1)
 
-        #self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        #self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        #self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=2)
         self.layer1, self.out_size = self._make_layer(block, 16*self.k, layers[0], in_size=self.out_size)
         self.layer2, self.out_size = self._make_layer(block, 32*self.k, layers[1], stride=2, dilate=replace_stride_with_dilation[0], in_size=self.out_size)
         self.layer3, self.out_size = self._make_layer(block, 64*self.k, layers[2], stride=2, dilate=replace_stride_with_dilation[1], in_size=self.out_size)
-        """self.layer2, out_size = self._make_layer(block, 32 * self.k, layers[1], stride=1,
-                                                 dilate=replace_stride_with_dilation[0], in_size=out_size)
-        self.layer3, out_size = self._make_layer(block, 64 * self.k, layers[2], stride=1,
-                                                 dilate=replace_stride_with_dilation[1], in_size=out_size)"""
 
-        #self.bnf = norm_layer(64*self.k)  # final batch normalisation layer
-        #self.bnf = self._wrapper_bn_spectral_norm(norm_layer, 64*self.k)
         self.bnf = self.wrapped_bn(64*self.k)
-        #self.bnf = nn.BatchNorm2d(64*self.k, affine=False)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(64 * k * block.expansion, num_classes)
-        #self.fc = self._wrapper_spectral_norm(nn.Linear(64 * k * block.expansion, num_classes), (), kernel_size=1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -198,7 +172,6 @@ class WideResNet(nn.Module):
         x = self.layer3(x)
 
         x = self.relu(self.bnf(x))
-        #x = self.relu(x)
 
         features = self.avgpool(x)
         features = features.view(features.size(0), -1)
@@ -260,8 +233,6 @@ class SensitiveWideResNet(nn.Module):
             else:
                 bn = nn.BatchNorm2d(num_features, eps=1e-5, momentum=0.01, affine=True)
 
-            # bn = nn.BatchNorm2d(num_features)
-
             return bn
 
         self.wrapped_bn = wrapped_bn
@@ -289,35 +260,20 @@ class SensitiveWideResNet(nn.Module):
         if spectral_normalization:
             self.conv1 = self._wrapper_spectral_norm(nn.Conv2d(self.in_depth, self.inplanes, kernel_size=3, stride=1, padding=1,
                                                                bias=False), (self.in_depth, self.in_width-O, self.in_height-O), 3)
-            #testweight = getattr(self.conv1, 'weight_orig')
-            #print(f"conv1 weight_orig shape: {testweight.shape}")
             self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=1)
-            #print(getattr(self.conv1, 'weight_u'))
-            #print(getattr(self.conv1, 'weight_u').shape)
         else:
             self.conv1 = nn.Conv2d(self.in_depth, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
             self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=1)
 
-        #self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.LeakyReLU(inplace=True)
-        #self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        #self.out_size = conv_output_size(self.out_size, kernel=3, padding=1, stride=2)
         self.layer1, self.out_size = self._make_layer(block, 16*self.k, layers[0], in_size=self.out_size)
         self.layer2, self.out_size = self._make_layer(block, 32*self.k, layers[1], stride=2, dilate=replace_stride_with_dilation[0], in_size=self.out_size)
         self.layer3, self.out_size = self._make_layer(block, 64*self.k, layers[2], stride=2, dilate=replace_stride_with_dilation[1], in_size=self.out_size)
-        """self.layer2, out_size = self._make_layer(block, 32 * self.k, layers[1], stride=1,
-                                                 dilate=replace_stride_with_dilation[0], in_size=out_size)
-        self.layer3, out_size = self._make_layer(block, 64 * self.k, layers[2], stride=1,
-                                                 dilate=replace_stride_with_dilation[1], in_size=out_size)"""
 
-        #self.bnf = norm_layer(64*self.k)  # final batch normalisation layer
-        #self.bnf = self._wrapper_bn_spectral_norm(norm_layer, 64*self.k)
         self.bnf = self.wrapped_bn(64 * self.k)
-        #self.bnf = nn.BatchNorm2d(64*self.k, affine=False)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(64 * k * block.expansion, num_classes)
-        #self.fc = self._wrapper_spectral_norm(nn.Linear(64 * k * block.expansion, num_classes), (), kernel_size=1)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -347,7 +303,6 @@ class SensitiveWideResNet(nn.Module):
         stride: int = 1,
         dilate: bool = False,
     ) -> nn.Sequential:
-        #norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
         output_size = in_size
@@ -364,13 +319,12 @@ class SensitiveWideResNet(nn.Module):
                     nn.AvgPool2d(pooling_kernel_size, stride=1),
                     self._wrapper_spectral_norm(nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1,
                                                           stride=1, bias=False), (self.inplanes, in_size[0]-O, in_size[1]-O), 1),
-                    #norm_layer(planes * block.expansion),
+
                 )
             else:
                 downsample = nn.Sequential(
                     nn.AvgPool2d(pooling_kernel_size, stride=1),
                     conv1x1(self.inplanes, planes * block.expansion, stride=1),
-                    #norm_layer(planes * block.expansion),
                 )
 
         layers = []
@@ -391,7 +345,6 @@ class SensitiveWideResNet(nn.Module):
                     groups=self.groups,
                     base_width=self.base_width,
                     dilation=self.dilation,
-                    #norm_layer=norm_layer,
                     spectral_normalization=self.spectral_normalization,
                     input_size=output_size,
                     n_power_iter=self.n_power_iter,
@@ -401,7 +354,6 @@ class SensitiveWideResNet(nn.Module):
             )
             output_size = conv_output_size(conv_output_size(output_size, kernel=3, padding=1, stride=1), kernel=3,
                                            padding=1, stride=1)
-        #print(f"final output size: {output_size}")
 
         return nn.Sequential(*layers), output_size
 
@@ -426,18 +378,12 @@ class SensitiveWideResNet(nn.Module):
     def _wrapper_spectral_norm(self, layer, shapes, kernel_size):
         if kernel_size == 1:
             # use spectral norm fc, because bound are tight for 1x1 convolutions
-            #return spectral_norm_fc(layer, self.coeff,
-            #                        n_power_iterations=self.n_power_iter)
             return spectral_norm_fc(layer, self.coeff, self.n_power_iter)
         else:
             # use spectral norm based on conv, because bound not tight
-            #return spectral_norm_conv(layer, self.coeff, shapes,
-            #                          n_power_iterations=self.n_power_iter)
             return spectral_norm_conv(layer, self.coeff, shapes, self.n_power_iter)
 
     def _wrapper_bn_spectral_norm(self, layer, num_features, eps=1e-5, momentum=0.01, affine=True):
-        #if self.spectral_normalization:
-        #    return layer(num_features, coeff=self.coeff, eps=eps, momentum=momentum, affine=affine)
         return layer(num_features)
 
     def forward(self, x: Tensor, return_features=False) -> Tensor:
