@@ -299,7 +299,11 @@ def compute_OOD_scores(dhm, ID_dataloader, OOD_dataloader, show_plots=False, cus
         plt.bar(OOD_edges[:-1], OOD_probs, width=np.diff(OOD_edges), alpha=0.5, label='OOD  Log Probabilities', align='edge')
         plt.title("Stripes ID and OOD Log Probabilities")
         plt.legend()
-        plt.savefig(f'figures/dhm{custom_prefix}_{n_blocks}-{dims}_lamb{lamb}_histogram_{epochs}.png')
+        dir_path = 'figures'
+        file_name = f'dhm{custom_prefix}_{n_blocks}-{dims}_lamb{lamb}_histogram_{epochs}.png'
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        plt.savefig(os.path.join(dir_path, file_name))
         plt.show()
 
         # plot feature
@@ -379,7 +383,11 @@ def plot_heatmap(dhm, iteration, ID_loader, OOD_loader, plot_dim=400, plt_min=-0
     plt.scatter(vertical_features[:, 0], vertical_features[:, 1], alpha=0.6, s=50, label='Vertical Features')
     plt.scatter(OOD_features[:, 0], OOD_features[:, 1], alpha=0.6, s=50, label='OOD Features')
 
-    plt.savefig(f'figures/dhm{custom_prefix}_{n_blocks}-{dims}_lamb{lamb}_result_{iteration}.png')
+    dir_path = 'figures'
+    file_name = f'dhm{custom_prefix}_{n_blocks}-{dims}_lamb{lamb}_result_{iteration}.png'
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    plt.savefig(os.path.join(dir_path, file_name))
 
     if show_plot:
         plt.show()
