@@ -15,7 +15,7 @@ This makes it an "easy" far-OOD dataset that tests an OOD detector's ability to 
 
 ## Replicating CIFAR-10 Results
 
-We report the following results compared to the original DHM:
+We report the following results compared to the original DHM (results are averaged over 10 independent seeds):
 
 **CIFAR-100 OOD set**
 
@@ -54,12 +54,3 @@ python train_dhm_iresflow.py --epochs 200 --batch 256 --N 4 --k 10 --n_blocks 10
 
 [^4]: Jeremiah Liu, Zi Lin, Shreyas Padhy, Dustin Tran, Tania Bedrax Weiss, and Balaji Lakshminarayanan. Simple and principled uncertainty estimation with deterministic deep learning via distance awareness. Advances in neural information processing systems, 33:7498–7512, 2020.
 
-```bibtex
-@inproceedings{Cao2022-cc,
-  title={Deep hybrid models for out-of-distribution detection},
-  author={Cao, Senqi and Zhang, Zhongfei},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  pages={4733--4743},
-  year={2022}
-}
-```
