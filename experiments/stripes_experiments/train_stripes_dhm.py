@@ -546,7 +546,7 @@ if __name__ == "__main__":
     num_samples = 2500
     num_test_samples = 500
 
-    seed = -1
+    seed = 2
     if seed == -1:
         seed = np.random.randint(2 ** 16 - 1)
     set_seed(seed)
