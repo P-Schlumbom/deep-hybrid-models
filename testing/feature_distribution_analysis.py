@@ -1,7 +1,7 @@
 from tqdm import tqdm
 from math import log
 import numpy as np
-from numpy import trapz
+from numpy import trapezoid as trapz
 from os.path import join
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -31,7 +31,7 @@ from architectures.normalising_flows.glow import Glow
 from architectures.normalising_flows.residual_flows.residual_flow import ResidualFlow, ACT_FNS, create_resflow
 from architectures.normalising_flows.residual_flows.layers.elemwise import LogitTransform, Normalize, IdentityTransform
 from architectures.normalising_flows.residual_flows.layers.squeeze import SqueezeLayer
-from architectures.deep_hybrid_models.dhm import DHM, define_flow_model, normalise_features
+from architectures.deep_hybrid_models.dhm import DHM_iresflows, create_flow_model, normalise_features
 from helpers.utils import running_average, print_model_params, get_model_params
 
 

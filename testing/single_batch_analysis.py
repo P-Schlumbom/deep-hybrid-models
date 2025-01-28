@@ -1,7 +1,7 @@
 from tqdm import tqdm
 from math import log
 import numpy as np
-from numpy import trapz
+from numpy import trapezoid as trapz
 from os.path import join
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -31,7 +31,7 @@ from architectures.normalising_flows.glow import Glow
 from architectures.normalising_flows.residual_flows.residual_flow import ResidualFlow, ACT_FNS, create_resflow
 from architectures.normalising_flows.residual_flows.layers.elemwise import LogitTransform, Normalize, IdentityTransform
 from architectures.normalising_flows.residual_flows.layers.squeeze import SqueezeLayer
-from architectures.deep_hybrid_models.dhm import DHM, define_flow_model
+from architectures.deep_hybrid_models.dhm import DHM_iresflows, create_flow_model
 from helpers.utils import running_average, print_model_params, get_model_params
 
 
@@ -348,18 +348,39 @@ if __name__ == "__main__":
         model_args['n_flows'],
         model_args['idim']))
     #nf = define_flow_model(model_args, in_shape=dnn_outshape)
-    nf = define_flow_model(model_args['batch'], model_args['k'], model_args['nf_type'], model_args['n_blocks'],
-                           model_args['n_flows'], model_args['idim'], model_args['factor_out'], model_args['actnorm'],
-                           model_args['act'], model_args['fc_end'], model_args['n_exact_terms'], model_args['affine'],
-                           model_args['no_lu'], model_args['squeeze_first'], dnn_outshape, fc=model_args['fc'],
-                           input_layer=model_args['init_layer'])
+    #nf = define_flow_model(model_args['batch'], model_args['k'], model_args['nf_type'], model_args['n_blocks'],
+    #                       model_args['n_flows'], model_args['idim'], model_args['factor_out'], model_args['actnorm'],
+    #                       model_args['act'], model_args['fc_end'], model_args['n_exact_terms'], model_args['affine'],
+    #                       model_args['no_lu'], model_args['squeeze_first'], dnn_outshape, fc=model_args['fc'],
+    #                       input_layer=model_args['init_layer'])
+    nf = create_flow_model(
+        input_size=model_args['M'],
+        dims=model_args['dims'],
+        actnorm=model_args['actnorm'],
+        n_blocks=model_args['n_blocks'],
+        act=model_args['act'],
+        n_dist=model_args['n_dist'],
+        n_power_series=model_args['n_power_series'],
+        exact_trace=model_args['exact_trace'],
+        brute_force=model_args['brute_force'],
+        n_samples=model_args['n_samples'],
+        batchnorm=model_args['batchnorm'],
+        vnorms=model_args['vnorms'],
+        learn_p=model_args['learn_p'],
+        mixed=model_args['mixed'],
+        coeff=model_args['nf_coeff'],
+        n_lipschitz_iters=model_args['n_lipschitz_iters'],
+        atol=model_args['atol'],
+        rtol=model_args['rtol'],
+        init_layer=None,
+    )
     print("number of parameters: {} ({:,})".format(get_model_params(nf), get_model_params(nf)))
 
     # --- DEFINE DHM --- #
     print("creating deep hybrid model with WRN-{}-{} dnn and {}-{}x{} nf".format(n, model_args['k'], model_args['nf_type'],
                                                                                  model_args['n_blocks'],
                                                                                  model_args['n_flows']))
-    dhm = DHM(dnn, nf, normalise_features=model_args['normalise_features'], flatten_features=model_args['flatten'],
+    dhm = DHM_iresflows(dnn, nf, normalise_features=model_args['normalise_features'], flatten_features=model_args['flatten'],
               flow_in_shape=[dnn_outshape[0], dnn_outshape[1], model_args['k'] * 64])
     # dhm.load_state_dict(torch.load("checkpoints/testing/20230404_dry-silence-52.pth"))
     print("number of parameters: {} ({:,})".format(get_model_params(dhm), get_model_params(dhm)))
@@ -373,4 +394,4 @@ if __name__ == "__main__":
     dhm.load_state_dict(model_dict['state_dict'])
     print("saved parameters loaded")
 
-    generate_histograms(dhm)
+    #generate_histograms(dhm)

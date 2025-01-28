@@ -18,8 +18,7 @@ import torchvision.transforms as transforms
 import argparse
 
 from architectures.normalising_flows.residual_flows.layers import base as base_layers
-from architectures.deep_hybrid_models.dhm import DHM, define_flow_model, DHM_normflows, BottleneckDHM, create_dhm, \
-    normflows_logpx_loop, create_ires_dhm, create_mvn_dhm
+from architectures.deep_hybrid_models.dhm import create_ires_dhm, DHM_iresflows
 from test_OOD import generate_histograms, generate_tsne_plots, generate_multidata_tsne_plots, test_embedding_methods, \
     test_custom_datasets, compute_auroc_scores, compute_embeddings
 from helpers.utils import running_average, print_model_params, get_model_params, set_seed
@@ -387,11 +386,11 @@ def get_lambda(est_final_loss):
 # ---------------------------MAIN PROGRAM----------------------------------------------------------------------------- #
 
 
-def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader, testloader, scheduler=None):
+def train(args, model: DHM_iresflows, flow_optimizer, dnn_optimizer, trainloader, testloader, scheduler=None):
     update_l = True
     test_results = None
     best_val_acc = 0
-    best_val_loss = np.Inf
+    best_val_loss = np.inf
     M = 64 * args.k * (model.dnn_out_size[0] * model.dnn_out_size[1])  # number of elements per sample
     if args.flatten:  # when using the avgpooling layer, output is the number of channels
         M = 64 * args.k  # if flatten, M is smaller
@@ -581,14 +580,14 @@ def train(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader
     return results
 
 
-def train_alternating(args, model: DHM_normflows, flow_optimizer, dnn_optimizer, trainloader, testloader,
+def train_alternating(args, model: DHM_iresflows, flow_optimizer, dnn_optimizer, trainloader, testloader,
                       scheduler=None):
     nf_epochs = 50
     train_nf = False
     update_l = True
     test_results = None
     best_val_acc = 0
-    best_val_loss = np.Inf
+    best_val_loss = np.inf
     M = 64 * args.k * (model.dnn_out_size[0] * model.dnn_out_size[1])  # number of elements per sample
     if args.flatten:  # when using the avgpooling layer, output is the number of channels
         M = 64 * args.k  # if flatten, M is smaller

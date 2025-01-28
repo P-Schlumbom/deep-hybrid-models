@@ -163,7 +163,7 @@ class DHM_iresflows(nn.Module):
 #
 # ----------------------------------------------------------------------------------------------------------------------#
 
-def normflows_logpx_loop(model: DHM_normflows, inputs):
+def normflows_logpx_loop(model: DHM_iresflows, inputs):
     return model.log_prob(inputs)
 
 
